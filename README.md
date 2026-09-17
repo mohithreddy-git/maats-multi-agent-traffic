@@ -1,449 +1,411 @@
 <div align="center">
-  <img src="assets/hero.svg" alt="MAATS — Multi-Agent AI-Based Adaptive Traffic Signal Coordination and Traffic Clearance System" width="100%" />
+  <img src="assets/maats-og.png" alt="MAATS — Multi-Agent AI-Based Adaptive Traffic Signal Coordination and Traffic Clearance System" width="100%" />
 
+  <h1>MAATS</h1>
+  <p><strong>Multi-Agent AI-Based Adaptive Traffic Signal Coordination and Traffic Clearance System</strong></p>
   <p>
-    <strong>Real-time vehicle detection • multi-agent traffic intelligence • adaptive signal timing</strong>
+    Real-time vehicle detection • multi-object tracking • directional agents • adaptive green-time control • safe single-green signal control
   </p>
 
   <p>
     <a href="https://github.com/mohithreddy-git/maats-multi-agent-traffic">Repository</a> ·
     <a href="#quick-start">Quick Start</a> ·
     <a href="#system-architecture">Architecture</a> ·
-    <a href="#vehicle-detection-and-tracking">Vehicle Detection</a> ·
-    <a href="#demo">Demo</a>
+    <a href="#vehicle-detection-and-tracking">Detection &amp; Tracking</a> ·
+    <a href="#adaptive-signal-control">Adaptive Signal Control</a> ·
+    <a href="#demo-flow">Demo</a>
   </p>
 
   <p>
     <img src="https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white" alt="Python" />
-    <img src="https://img.shields.io/badge/Computer%20Vision-YOLOv8n-111827?logo=yolo&logoColor=white" alt="YOLOv8n" />
-    <img src="https://img.shields.io/badge/Tracking-Multi--Object-0F766E" alt="Tracking" />
+    <img src="https://img.shields.io/badge/Computer%20Vision-YOLOv8n-111827" alt="YOLOv8n" />
+    <img src="https://img.shields.io/badge/Tracking-Multi--Object-0F766E" alt="Multi-object tracking" />
     <img src="https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit" />
     <img src="https://img.shields.io/badge/Tests-181%2F181%20passing-16A34A" alt="Tests" />
+    <img src="https://img.shields.io/badge/Green%20Time-10%E2%80%9390s-16A34A" alt="Adaptive 10 to 90 seconds" />
   </p>
 </div>
 
-# 🚦 MAATS
+---
 
-**Multi-Agent AI-Based Adaptive Traffic Signal Coordination and Traffic Clearance System**
+## 🚦 Overview
 
-MAATS is an intelligent traffic-control prototype that combines **real-time computer vision, multi-object tracking, autonomous directional agents, message-based coordination, and adaptive traffic-signal timing**.
+**MAATS** is a multi-agent traffic-signal coordination prototype that combines **computer vision, multi-object tracking, directional traffic agents, message-based coordination, adaptive green-time calculation, and a safety-gated signal state machine**.
 
-Instead of treating an intersection as a single monolithic controller, MAATS models **North, East, South, and West as independent traffic agents**. Each agent observes its own traffic conditions, communicates those conditions to a coordinator, and contributes to a decision about **which direction should receive the next green phase and for how long**.
+The central idea is to turn each approach of an intersection into an autonomous traffic agent:
 
-The system is designed for an evaluator-friendly workflow:
+- **North Agent** observes North-side traffic.
+- **East Agent** observes East-side traffic.
+- **South Agent** observes South-side traffic.
+- **West Agent** observes West-side traffic.
+- A **Coordinator Agent** receives those traffic states and determines the next direction to serve.
+- The **Signal FSM** remains the final authority over the physical/dashboard signal state.
 
-> **Traffic video → vehicle detection → tracking → traffic metrics → four agents → coordinator → adaptive green time → one safe green signal**
+The resulting loop is:
+
+> **Traffic Video → Vehicle Detection → Tracking → Traffic Metrics → Directional Agents → Message Bus → Coordinator → Adaptive Green Time → Safe Signal Control**
 
 ---
 
-## ✨ Key Capabilities
+## ✨ Why MAATS?
 
-| Capability | Description |
+Traditional fixed-time signal control can allocate the same amount of green time even when the traffic state is very different from one approach to another. MAATS instead uses observed traffic conditions to determine **which direction should receive the next green phase and how long that phase should last**, while preserving a strict safety invariant:
+
+> **Exactly one direction can be GREEN at any instant.**
+
+The controller adapts duration within configured bounds:
+
+**Low traffic → shorter green**  
+**Medium traffic → medium green**  
+**Heavy traffic → longer green**  
+**Extreme traffic → up to the 90-second ceiling**
+
+For the no-video/no-metrics fallback, the controller uses a deterministic 90-second rotation:
+
+**North → East → South → West → repeat**
+
+---
+
+## 🧩 Key Capabilities
+
+| Capability | Implementation |
 |---|---|
-| 🎥 **Traffic Video Input** | Per-direction prerecorded traffic videos with runtime upload and switching support |
-| 🚗 **Vehicle Detection** | YOLOv8n for real traffic footage with traffic-class filtering |
-| 🧭 **Multi-Object Tracking** | Stable vehicle IDs, temporary-miss tolerance, stale-track expiry, track-level class smoothing |
-| 📐 **Traffic Metrics** | Active/unique vehicles, queue, density, arrival information and detection latency |
-| 🤖 **Multi-Agent Architecture** | Independent North/East/South/West directional agents plus a coordinator |
-| 📡 **Message Bus** | Agents exchange real traffic state rather than relying on a single shared decision routine |
-| 🧠 **Adaptive Green Time** | Green duration is calculated from the selected direction's current traffic conditions |
-| ⏱️ **Signal Bounds** | Minimum green: **10 s**; maximum green: **90 s** |
-| 🚦 **Safety FSM** | Exactly one direction can be GREEN; YELLOW and ALL-RED are enforced during transitions |
-| 🖥️ **Streamlit Dashboard** | Traffic Vision, Multi-Agent Communication and Signal Control views |
-| 🔌 **ESP32 Path** | Hardware-ready signal output through the safety-gated controller |
-| 🧪 **Validation** | Full automated suite currently validated at **181/181 tests passing** |
+| 🎥 Traffic video input | Per-direction prerecorded video, upload and runtime switching |
+| 🚗 Vehicle detection | YOLOv8n with traffic-class filtering |
+| 🧭 Multi-object tracking | Stable IDs, temporary-miss tolerance, stale-track expiry, track-level class smoothing |
+| 📐 Traffic metrics | Vehicle count, unique vehicles, queue, density, arrival information and latency metrics |
+| 🤖 Multi-agent system | Independent North/East/South/West agents + coordinator |
+| 📡 Message bus | Real traffic state and coordination messages between agents |
+| 🧠 Adaptive green time | Per-phase duration calculated from the selected direction's live traffic metrics |
+| ⏱️ Timing bounds | **10 s minimum / 90 s maximum** |
+| 🚦 Safety FSM | One active direction, YELLOW and ALL-RED transition protection |
+| 🖥️ Dashboard | Traffic Vision, Multi-Agent Communication and Signal Control views |
+| 🔌 Hardware path | Safety-gated ESP32/LED signal output path |
+| 🧪 Validation | Latest reported automated suite: **181/181 tests passing** |
 
 ---
 
-## 🎯 Why MAATS?
+## 🏗️ System Architecture
 
-Conventional fixed-time traffic control does not directly react to the traffic state visible at an intersection. MAATS instead creates a closed feedback loop in which **detected traffic influences agent state, agent state influences coordination, and coordination influences the next signal phase**.
+<img src="assets/architecture.svg" alt="MAATS end-to-end architecture diagram" width="100%" />
 
-The controller is adaptive without sacrificing signal safety:
-
-- **Low traffic → shorter green**
-- **Medium traffic → medium green**
-- **Heavy traffic → longer green**
-- **Extreme traffic → green capped at 90 seconds**
-- **No usable video → deterministic 90-second fallback rotation**
-
-The current green duration is calculated **once when the phase begins**. A new detection does not randomly reset the countdown in the middle of the active phase.
-
----
-
-# 🏗️ System Architecture
-
-<img src="assets/architecture.svg" alt="MAATS system architecture" width="100%" />
-
-### End-to-end flow
+### Architecture at a glance
 
 ```text
-                    ┌──────────────────────┐
-                    │     Traffic Video    │
-                    │ N / E / S / W source │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │  Vehicle Detection   │
-                    │       YOLOv8n        │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │       Tracker        │
-                    │ stable IDs + state   │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-                    ┌──────────────────────┐
-                    │   TrafficMetrics     │
-                    │ count / queue /      │
-                    │ density / arrival    │
-                    └──────────┬───────────┘
-                               │
-          ┌────────────────────┼────────────────────┐
-          ▼                    ▼                    ▼
-       NORTH                EAST                  SOUTH ... WEST
-       AGENT                 AGENT                 AGENT
-          └────────────────────┼────────────────────┘
-                               ▼
-                    ┌──────────────────────┐
-                    │      Message Bus     │
-                    └──────────┬───────────┘
-                               ▼
-                    ┌──────────────────────┐
-                    │     Coordinator      │
-                    │ next direction +     │
-                    │ adaptive duration   │
-                    └──────────┬───────────┘
-                               ▼
-                    ┌──────────────────────┐
-                    │     Signal FSM       │
-                    │ GREEN → YELLOW →    │
-                    │ ALL-RED → GREEN     │
-                    └──────────┬───────────┘
-                               ▼
-                  ┌───────────────────────────┐
-                  │ Streamlit / ESP32 Output  │
-                  └───────────────────────────┘
+                   ┌──────────────────────┐
+                   │    Traffic Video    │
+                   │   N / E / S / W     │
+                   └──────────┬───────────┘
+                              │
+                              ▼
+                   ┌──────────────────────┐
+                   │  Vehicle Detection   │
+                   │       YOLOv8n        │
+                   └──────────┬───────────┘
+                              │
+                              ▼
+                   ┌──────────────────────┐
+                   │       Tracker        │
+                   │ IDs + track state    │
+                   └──────────┬───────────┘
+                              │
+                              ▼
+                   ┌──────────────────────┐
+                   │    TrafficMetrics    │
+                   │ count / queue /      │
+                   │ density / arrival    │
+                   └──────────┬───────────┘
+                              │
+            ┌─────────────────┼─────────────────┐
+            ▼                 ▼                 ▼
+        NORTH AGENT        EAST AGENT       SOUTH AGENT ... WEST
+            └─────────────────┼─────────────────┘
+                              ▼
+                   ┌──────────────────────┐
+                   │      Message Bus     │
+                   └──────────┬───────────┘
+                              ▼
+                   ┌──────────────────────┐
+                   │     Coordinator      │
+                   │ next direction +     │
+                   │ green duration       │
+                   └──────────┬───────────┘
+                              ▼
+                   ┌──────────────────────┐
+                   │      Signal FSM      │
+                   │ one GREEN only      │
+                   └──────────┬───────────┘
+                              ▼
+                   ┌──────────────────────┐
+                   │ Dashboard / ESP32    │
+                   └──────────────────────┘
 ```
 
 ---
 
-# 🚗 Vehicle Detection & Tracking
+## 🚘 Vehicle Detection & Tracking
 
 <img src="assets/detection-pipeline.svg" alt="MAATS vehicle detection and tracking pipeline" width="100%" />
 
-MAATS uses a **real object-detection pipeline for real traffic footage** and keeps a lightweight motion-based fallback for synthetic square-object demo clips where an object detector is not expected to classify the shapes as real vehicles.
+### Detection pipeline
 
-### Primary real-video pipeline
+MAATS uses **YOLOv8n** as the primary vehicle detector for real traffic footage. The pipeline is designed around the separation of detection, tracking and traffic-state extraction:
 
-```text
-Frame
- ↓
-Orientation / aspect-preserving preprocessing
- ↓
-YOLOv8n
- ↓
-Vehicle-class filtering
- ↓
-Confidence / IoU filtering
- ↓
-ROI polygon filtering
- ↓
-Multi-object tracking
- ↓
-Track-level class smoothing
- ↓
-TrafficMetrics
-```
+1. Decode the video frame.
+2. Preserve aspect ratio during preprocessing.
+3. Run vehicle-focused object detection.
+4. Apply confidence/class filtering.
+5. Apply the direction-specific ROI.
+6. Track detections across frames.
+7. Smooth vehicle class labels across the track.
+8. Convert live tracks into `TrafficMetrics`.
 
 ### Vehicle classes
 
-The detector is restricted to relevant traffic classes such as:
+The detector is configured around traffic-relevant classes such as:
 
-- Car
-- Motorcycle
-- Bus
-- Truck
-
-Where appropriate, bicycle detection can also be enabled.
+- car
+- motorcycle
+- bus
+- truck
 
 ### Tracking behavior
 
-The tracker is responsible for maintaining a vehicle's identity across frames instead of treating every detection as a brand-new vehicle.
+The tracker is responsible for maintaining an identity over time rather than treating every frame as a brand-new set of vehicles.
 
-It supports:
+The implementation includes:
 
-- stable track IDs while a vehicle remains visible;
-- tolerance to brief detector misses;
-- one-to-one detection assignment;
+- stable track IDs;
+- one-to-one assignment;
+- tolerance for brief detector misses;
 - stale-track expiry;
-- video-switch tracker reset;
-- track-level class smoothing to reduce CAR/TRUCK/BUS flicker;
-- continuous tracking of stationary or stop-and-go traffic.
+- tracker reset when switching to a new video;
+- track-level class smoothing to reduce CAR/TRUCK/BUS label flicker;
+- traffic counts derived from live tracks rather than fabricated values.
 
-### Detection performance observed during validation
+### Synthetic demo-video fallback
 
-The current validated real-video runs produced approximately:
+Some supplied demo clips use synthetic square objects rather than realistic vehicles. Those clips can use the project's motion-detection fallback because a normal object detector cannot reliably classify arbitrary synthetic squares as real cars.
 
-- **22–28 FPS** processing on the tested real traffic footage;
-- **~33–42 ms** average detector latency;
-- first useful detection ranging from approximately **0.05–1.3 s** on the tested normal landscape footage;
-- real tracked vehicles with persistent IDs;
-- external 1280×720 traffic footage successfully processed through the YOLO pipeline.
-
-These are observed prototype measurements, **not a claim of universal detection accuracy**.
+Real traffic footage uses the YOLO-based primary pipeline.
 
 ---
 
-# 🤖 Multi-Agent Intelligence
+## 🧠 Adaptive Signal Control
 
-MAATS uses four directional agents:
+<img src="assets/adaptive-control.svg" alt="Adaptive green-time controller diagram" width="100%" />
 
-```text
-┌─────────────┐     ┌─────────────┐
-│ NORTH AGENT │     │  EAST AGENT  │
-└──────┬──────┘     └──────┬──────┘
-       │                   │
-       └────────┬──────────┘
-                ▼
-        ┌───────────────┐
-        │   COORDINATOR │
-        └───────────────┘
-                ▲
-       ┌────────┴─────────┐
-       │                  │
-┌──────┴──────┐    ┌──────┴───────┐
-│SOUTH AGENT  │    │  WEST AGENT  │
-└─────────────┘    └──────────────┘
-```
+The signal controller separates **direction selection** from **phase duration**.
 
-Each directional agent receives real traffic state for its direction, publishes its state over the internal message bus, and contributes to the coordinator's decision.
+### Direction selection
 
-The coordinator determines:
+The four agents publish their traffic state. The coordinator evaluates the current information and chooses the direction that should receive the **next** green phase.
 
-1. **which direction should receive the next green slot;**
-2. **how long that slot should remain green, based on that direction's own traffic metrics.**
+### Green duration
 
-This preserves the separation between **local observation** and **intersection-level coordination**.
+The selected direction receives a traffic-dependent green duration calculated from its own live metrics, including the available vehicle-count, queue and density signals.
 
----
-
-# 🧠 Adaptive Green-Time Control
-
-<img src="assets/adaptive-control.svg" alt="MAATS adaptive green-time control" width="100%" />
-
-The controller no longer treats 90 seconds as the fixed duration of every green phase.
-
-Instead:
+The duration is bounded by:
 
 ```text
-traffic metrics
-      ↓
-priority / selection
-      ↓
-next direction
-      ↓
-calculate green duration
-      ↓
-clamp to [10s, 90s]
-      ↓
-GREEN countdown
-      ↓
-YELLOW
-      ↓
-ALL RED
-      ↓
-next direction
+MIN_GREEN = 10 seconds
+MAX_GREEN = 90 seconds
 ```
 
-The duration is determined from the selected direction's current:
+The duration is calculated **once when the phase begins**. New observations affect the next phase rather than randomly rewriting the active countdown in the middle of the current phase.
 
-- vehicle count;
-- queue length;
-- density;
-- arrival/waiting information where available.
+### Example behavior
 
-### Example behavior observed
+| Traffic condition | Example outcome |
+|---|---:|
+| Light | 10–20 s range |
+| Medium | Medium-duration phase |
+| Heavy | Longer phase |
+| Extreme | Up to 90 s ceiling |
+| No usable video | 90 s deterministic fallback |
 
-| Traffic state | Observed condition | Example green duration |
+The live validation reported the following progression across independent runs:
+
+| Source | Observed traffic | Calculated green |
 |---|---:|---:|
-| Light | 0–1 vehicles | 10–13 s |
-| Medium | 2–3 vehicles, queue ≈ 2 | 16–19 s |
-| Heavy | ≈ 6 vehicles, queue ≈ 2 | ≈ 34 s |
-| Extreme | ≈ 19 vehicles, queue ≈ 5 | 90 s (maximum) |
+| `light.mp4` | 0–1 vehicles | 10–13 s |
+| `medium.mp4` | 2–3 vehicles, queue 2 | 16–19 s |
+| `heavy.mp4` | 6 vehicles, queue 2 | 34 s |
+| Real external footage | 19 vehicles, queue 5 | 90 s ceiling |
 
-The exact value depends on the live metrics and configured scoring function.
-
-### Safety invariant
-
-At any instant:
-
-> **Exactly one direction may be GREEN.**
-
-The signal controller is the final authority over the physical/dashboard state. If a corrupted command attempts to produce an unsafe state, the system fails safe to **ALL RED**.
+These values are runtime observations from the project validation, not hard-coded demonstration values.
 
 ---
 
-# 🚦 Signal State Machine
+## 🚦 Signal Safety Model
+
+A central safety requirement is enforced throughout the dashboard and hardware-output paths:
 
 ```text
-               ┌──────────────┐
-               │ GREEN: N/E/S/W│
-               └──────┬───────┘
-                      │ timer = 0
-                      ▼
-               ┌──────────────┐
-               │    YELLOW    │
-               └──────┬───────┘
-                      ▼
-               ┌──────────────┐
-               │   ALL RED    │
-               └──────┬───────┘
-                      ▼
-               ┌──────────────┐
-               │ NEXT GREEN   │
-               └──────────────┘
+At every instant:
+
+GREEN directions ≤ 1
+
+During GREEN:
+    GREEN directions = 1
+
+During YELLOW / ALL-RED:
+    GREEN directions = 0
 ```
 
-### Invariants
+The phase sequence is:
 
-- Never two simultaneous green signals.
-- Current green phase is not arbitrarily interrupted by a new vehicle observation.
-- Green duration remains within the configured minimum/maximum bounds.
-- Video switching does not reset the active signal phase.
-- Invalid input fails safely rather than generating contradictory signal states.
+```text
+GREEN(current direction)
+        ↓
+YELLOW(current direction)
+        ↓
+ALL RED
+        ↓
+GREEN(next direction)
+```
 
----
+A new traffic decision cannot simply switch another direction to GREEN in the middle of an active phase.
 
-# 🖥️ Dashboard
-
-MAATS exposes three primary evaluation views.
-
-## 1. Traffic Vision
-
-Shows the live traffic source and computer-vision state, including vehicle bounding boxes, tracking IDs, confidence, counts and processing information.
-
-**Typical evaluator question answered:**
-> “Can I actually see the system detecting the vehicles?”
-
-## 2. Multi-Agent Communication
-
-Shows directional agent state, traffic metrics, message flow and the coordinator's next-direction decision.
-
-**Typical evaluator question answered:**
-> “Where is the multi-agent intelligence happening?”
-
-## 3. Signal Control
-
-Shows the current direction, signal state, adaptive duration, countdown and the other three directions.
-
-**Typical evaluator question answered:**
-> “How does the traffic information change the signal?”
-
-### Signal Control snapshot
-
-<img src="assets/signal-control.png" alt="MAATS Signal Control dashboard" width="100%" />
+The signal controller is the final authority on timing and safe output state.
 
 ---
 
-# 🎬 Recommended Demo Flow
+## 🎬 Demo Flow
 
-A concise demonstration can follow this sequence:
+<img src="assets/demo-flow.svg" alt="Three-screen evaluator demo flow" width="100%" />
 
-### Step 1 — Show Traffic Vision
+The recommended evaluator sequence is:
 
-Start with a real traffic video.
+### 01 — Traffic Vision
 
-Show:
+Show a live traffic video with:
 
 - vehicle bounding boxes;
 - track IDs;
-- current vehicle count;
-- live traffic conditions.
+- class labels;
+- confidence;
+- active vehicle count;
+- traffic metrics.
 
-### Step 2 — Show the four agents
+### 02 — Multi-Agent Communication
 
-Move to **Multi-Agent Communication**.
+Move to the communication view and show:
 
-Explain that the traffic observed in each direction is converted into directional agent state and sent to the coordinator.
+- North/East/South/West agent state;
+- actual traffic metrics flowing from the CV pipeline;
+- inter-agent messages;
+- coordinator decision;
+- selected next direction;
+- calculated green duration.
 
-### Step 3 — Show adaptive timing
+### 03 — Signal Control
 
-Move to **Signal Control**.
+Show:
 
-Example:
+- exactly one GREEN direction;
+- three RED directions;
+- active countdown;
+- selected traffic direction;
+- calculated green duration and reason.
 
-```text
-LOW TRAFFIC
-→ shorter green
+A real Signal Control screenshot from the project is included below.
 
-HEAVY TRAFFIC
-→ longer green
-
-EXTREME TRAFFIC
-→ capped at 90s
-```
-
-### Step 4 — Switch the input video
-
-Change one direction's video source while the application is running.
-
-The detector/tracker updates for the new video while the active signal phase remains under the SignalFSM's control.
-
-### Step 5 — Demonstrate safety
-
-Show that only one direction is green and the remaining directions stay red.
+<p align="center">
+  <img src="assets/signal-control.png" alt="MAATS Signal Control dashboard" width="92%" />
+</p>
 
 ---
 
-# 🚀 Quick Start
+## 🔄 Video Upload & Runtime Switching
 
-## Prerequisites
+The application supports runtime traffic-video switching without resetting the active signal FSM.
 
-- Python 3.x
-- pip
-- Git
-- a machine capable of running the selected computer-vision model locally
+Typical evaluator sequence:
 
-## Clone
+```text
+Medium video
+    ↓
+Heavy video
+    ↓
+Light video
+    ↓
+External uploaded traffic video
+```
+
+During a switch:
+
+- the old video capture is released;
+- the direction's tracker state is reset;
+- the detector model remains cached;
+- old bounding boxes/IDs are cleared;
+- new video metrics begin flowing;
+- the current signal direction and active countdown remain intact.
+
+This allows an evaluator to request a different traffic source during the demonstration without restarting the entire application.
+
+---
+
+## 🖥️ Dashboard Views
+
+### Traffic Vision
+
+The computer-vision view is designed to answer:
+
+> **What vehicles are actually being detected and tracked?**
+
+### Multi-Agent Communication
+
+The coordination view is designed to answer:
+
+> **How do four directional agents communicate their traffic state, and what does the coordinator decide?**
+
+### Signal Control
+
+The signal view is designed to answer:
+
+> **Which direction is currently green, how long is its adaptive phase, and are the other directions safely held at red?**
+
+---
+
+## ⚡ Quick Start
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/mohithreddy-git/maats-multi-agent-traffic.git
 cd maats-multi-agent-traffic
 ```
 
-## Create a virtual environment
+### 2. Create a virtual environment
 
-### macOS / Linux
+macOS / Linux:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### Windows
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\activate
+.\.venv\Scripts\Activate.ps1
 ```
 
-## Install dependencies
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Run the dashboard
+### 4. Start the dashboard
 
 ```bash
 streamlit run dashboard.py
 ```
 
-Open the local Streamlit URL shown in the terminal, typically:
+Then open the local Streamlit URL shown in the terminal, normally:
 
 ```text
 http://localhost:8501
@@ -451,120 +413,167 @@ http://localhost:8501
 
 ---
 
-# 📁 Repository Structure
+## 🧪 Run the Test Suite
+
+Run the complete test suite with the project's configured test runner. A typical invocation is:
+
+```bash
+pytest -q
+```
+
+Latest reported validation:
+
+```text
+181 passed, 0 failed
+```
+
+The validation covered adaptive timing, timing bounds, single-green safety, video switching, coordinator behavior, real metric flow, failure isolation and dashboard-related regression cases.
+
+---
+
+## 📊 Real-Video Validation Snapshot
+
+The project was tested against supplied demo clips and external real traffic footage.
+
+| Input | Resolution / FPS | Detector | Avg latency | Processing FPS | Observation |
+|---|---|---|---:|---:|---|
+| Empty | 640×480 / 30 | Motion fallback | ~1.8 ms | ~381 | No false vehicles observed |
+| Light | 640×480 / 30 | Motion fallback | ~2.0 ms | ~308 | Stable synthetic demo |
+| Medium | 640×480 / 30 | Motion fallback | ~2.0 ms | ~304 | Stable synthetic demo |
+| Heavy | 640×480 / 30 | Motion fallback | ~2.1 ms | ~278 | Minor synthetic edge-wrapping ID churn |
+| External real video | 1280×720 / 25 | YOLOv8n | ~33.3 ms | ~28.4 FPS | Stable sampled real tracks |
+| External real video | 1280×720 / 50 | YOLOv8n | ~41.9 ms | ~22.9 FPS | Stable stop-and-go tracking observed |
+
+These are measured validation values from the project run, not theoretical benchmarks.
+
+---
+
+## 🧱 Project Structure
 
 ```text
 maats-multi-agent-traffic/
+│
 ├── backend/
 │   ├── agents/              # directional agents + coordinator
-│   ├── cv/                  # detection, tracking and video processing
-│   ├── hardware/            # ESP32 / signal output safety gate
-│   └── traffic_engine/      # scoring, metrics and SignalFSM
+│   ├── cv/                  # detection, tracking, video adapters
+│   ├── hardware/            # ESP32 / LED safety-gated output
+│   ├── traffic_engine/      # scoring, timing, signal FSM
+│   └── ...
+│
 ├── data/
-│   └── traffic/             # intentional demo traffic assets
-├── scripts/                 # utilities / demo preparation
-├── tests/                   # unit + integration + safety tests
+│   └── traffic/             # intentional demo video assets
+│
+├── scripts/                 # utilities / demo-data helpers
+├── tests/                   # unit + integration + regression tests
 ├── dashboard.py             # Streamlit application
-├── requirements.txt         # Python dependencies
+├── requirements.txt
 ├── .gitignore
 └── README.md
 ```
 
 ---
 
-# 🧪 Validation
+## 🔌 Hardware Integration
 
-The current development validation reports:
+The architecture includes an ESP32/LED signal-output path.
 
-- **181/181 automated tests passing** after adaptive green-time integration;
-- real-video YOLOv8n runs at approximately **22–28 FPS** on tested footage;
-- observed detector latency of approximately **33–42 ms** on tested real footage;
-- video switching verified without resetting the active SignalFSM phase;
-- no-video fallback verified as **North → East → South → West** with 90-second green phases;
-- single-green invariant verified over extended simulated and real-time monitoring;
-- adaptive green-time behavior verified across low, medium, heavy and extreme traffic conditions;
-- track-level class smoothing reduced observed class-label transitions substantially on the tested footage.
-
-These figures represent the tested prototype environment and should not be interpreted as universal benchmark guarantees.
+The software safety boundary validates the requested signal state before it is sent to the hardware layer. During the documented validation session, no physical ESP32 was connected, so the hardware path was validated through software tests rather than an attached physical junction.
 
 ---
 
-# ⚠️ Known Limitations
+## 🧯 Failure Handling
 
-The project is a demonstrable prototype rather than a production traffic-management deployment.
+MAATS is designed to fail safely rather than fabricate traffic information.
 
-Known limitations include:
+Handled scenarios include:
 
-- Real-world vehicle-detection quality varies with camera angle, lighting, occlusion, vehicle scale and video quality.
-- Rotated/portrait footage can require orientation-aware preprocessing; this is a known area for further hardening.
-- CPU-only YOLO inference can be slower than GPU inference.
-- Synthetic square-object demo clips may use the MotionDetector fallback instead of real vehicle classification.
-- Physical ESP32 hardware was not continuously attached during software validation.
-- Long-running sessions can accumulate the project's cumulative unique-track set by design.
+- malformed video frames;
+- empty detection results;
+- detector exceptions;
+- invalid video paths;
+- end-of-video conditions;
+- video switching;
+- temporary detection misses;
+- Streamlit reruns;
+- malformed agent messages.
 
-No claim is made that the system achieves perfect vehicle detection or universal camera compatibility.
-
----
-
-# 🔐 Safety and Reliability Design
-
-The implementation deliberately keeps signal safety inside the signal controller rather than trusting upstream components.
-
-Key safeguards include:
-
-- a single canonical green-state assertion;
-- fail-safe ALL-RED handling for corrupted commands;
-- isolated agent/source exceptions;
-- tracker reset on video switching;
-- detector model reuse without unnecessary reloads;
-- bounded signal timing;
-- no mid-phase interruption caused by new traffic observations;
-- explicit YELLOW and ALL-RED transitions.
+The signal controller remains the final safety boundary.
 
 ---
 
-# 🛣️ Future Extensions
+## 🌐 Real-World Input Notes
 
-Potential production-oriented extensions include:
+The project is intended to accept different traffic-video dimensions and aspect ratios, with aspect-preserving preprocessing and direction-specific ROI handling.
 
-- GPU-backed inference and stronger detectors/trackers;
-- camera calibration and automatic road-scene/ROI calibration;
+A known limitation remains for some **genuinely rotated/portrait real-world footage**, where the detector can lose useful detections because the visual orientation differs from normal landscape traffic footage. This is documented rather than hidden.
+
+The project also contains synthetic demo clips. Those use the project's explicit motion-detection fallback when a conventional vehicle detector would not be able to interpret the synthetic objects as real road vehicles.
+
+---
+
+## 🔬 Engineering Principles
+
+MAATS follows several design principles:
+
+**Separation of concerns**  
+Detection, tracking, traffic metrics, agents, coordination and signal output remain separate layers.
+
+**Single source of truth for signal state**  
+The Signal FSM owns the active direction and final timing bounds.
+
+**Real metrics over fabricated demo data**  
+Vehicle counts and traffic summaries originate from the CV pipeline where video input is available.
+
+**Adaptive, not chaotic, timing**  
+Traffic changes affect future phase decisions; the active countdown is not continuously rewritten.
+
+**Defensive safety gates**  
+Dashboard and hardware outputs pass through the same single-green invariant.
+
+**Demo reliability first**  
+Video switching, malformed inputs and agent exceptions are isolated so one local failure does not unnecessarily freeze the complete pipeline.
+
+---
+
+## 🗺️ Roadmap
+
+Possible future production extensions include:
+
 - multi-junction coordination;
-- MQTT or equivalent field communication;
-- authenticated operator access;
-- historical traffic analytics;
-- cloud deployment;
-- advanced predictive or reinforcement-learning controllers;
-- stronger hardware failover and field safety certification.
+- direct real-time camera/RTSP feeds;
+- stronger camera-motion handling;
+- more advanced re-identification for long occlusions;
+- edge deployment and GPU acceleration;
+- MQTT or other inter-junction transport;
+- richer historical traffic analytics;
+- reinforcement-learning comparison experiments;
+- authenticated remote hardware control;
+- production observability and telemetry.
 
-These are future directions and are **not represented as live capabilities of the current prototype**.
-
----
-
-# 📚 Technical References
-
-The computer-vision and traffic-control design was informed by open-source traffic-detection and adaptive-signal implementations, including:
-
-- [vehicle_counting_tensorflow](https://github.com/ahmetozlu/vehicle_counting_tensorflow)
-- [Traffic_signal_counter_using_car_count_python](https://github.com/jambhaleAnuj/Traffic_signal_counter_using_car_count_python)
-- [Adaptive-Traffic-Lights](https://github.com/DanielMusau/Adaptive-Traffic-Lights)
-
-These repositories were used as technical references for concepts such as vehicle detection, tracking, traffic-density estimation and adaptive signal control. The MAATS implementation should be reviewed independently for its own code and licensing obligations.
+These are future extensions and are not represented as already-live functionality in the current prototype.
 
 ---
 
-# 📌 Project Status
+## 📚 Technical References
 
-**Status:** Demo-ready prototype
+The implementation and design study referenced the following public projects:
 
-**Primary objective:** Demonstrate how real-time vehicle intelligence and autonomous directional agents can drive adaptive signal timing while preserving a strict one-green safety invariant.
+- [vehicle_counting_tensorflow — ahmetozlu](https://github.com/ahmetozlu/vehicle_counting_tensorflow)
+- [Traffic_signal_counter_using_car_count_python — jambhaleAnuj](https://github.com/jambhaleAnuj/Traffic_signal_counter_using_car_count_python)
+- [Adaptive-Traffic-Lights — DanielMusau](https://github.com/DanielMusau/Adaptive-Traffic-Lights)
+
+The MAATS repository should be treated as its own implementation; third-party code and licensing requirements should be respected separately from the architectural ideas referenced above.
+
+---
+
+## 👥 Project
+
+**MAATS — Multi-Agent AI-Based Adaptive Traffic Signal Coordination and Traffic Clearance System**
+
+GitHub: **https://github.com/mohithreddy-git/maats-multi-agent-traffic**
 
 ---
 
 <div align="center">
-
-### 🚦 Detect. Communicate. Decide. Adapt.
-
-**MAATS — Multi-Agent AI-Based Adaptive Traffic Signal Coordination and Traffic Clearance System**
-
+  <sub>Built as an engineering prototype demonstrating computer vision, multi-agent coordination, adaptive traffic control and safety-oriented signal-state management.</sub>
 </div>

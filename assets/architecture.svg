@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+<defs><style>.title{font:700 34px Arial;fill:#0f172a}.h{font:700 21px Arial;fill:#0f172a}.t{font:17px Arial;fill:#475569}.s{font:14px Arial;fill:#64748b}</style><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0L10,5L0,10Z" fill="#64748b"/></marker></defs>
+<rect width="1200" height="720" fill="#f8fafc"/><text x="55" y="56" class="title">MAATS — End-to-End Multi-Agent Architecture</text>
+<g stroke-width="2">
+<rect x="55" y="105" width="220" height="110" rx="18" fill="#eff6ff" stroke="#60a5fa"/><text x="165" y="145" text-anchor="middle" class="h">Traffic Video</text><text x="165" y="175" text-anchor="middle" class="t">N / E / S / W sources</text>
+<rect x="325" y="105" width="220" height="110" rx="18" fill="#ecfdf5" stroke="#34d399"/><text x="435" y="145" text-anchor="middle" class="h">Vehicle Detection</text><text x="435" y="175" text-anchor="middle" class="t">YOLOv8n + classes</text>
+<rect x="595" y="105" width="220" height="110" rx="18" fill="#f5f3ff" stroke="#8b5cf6"/><text x="705" y="145" text-anchor="middle" class="h">Tracking</text><text x="705" y="175" text-anchor="middle" class="t">IDs + smoothing</text>
+<rect x="865" y="105" width="280" height="110" rx="18" fill="#fff7ed" stroke="#fb923c"/><text x="1005" y="145" text-anchor="middle" class="h">TrafficMetrics</text><text x="1005" y="175" text-anchor="middle" class="t">count • queue • density</text>
+</g>
+<g stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#a)"><path d="M275 160H325"/><path d="M545 160H595"/><path d="M815 160H865"/></g>
+<rect x="55" y="285" width="1090" height="250" rx="24" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><text x="82" y="325" class="h">Directional Agents + Internal Message Bus</text>
+<g fill="#eff6ff" stroke="#60a5fa" stroke-width="2"><rect x="80" y="360" width="200" height="105" rx="18"/><rect x="310" y="360" width="200" height="105" rx="18"/><rect x="540" y="360" width="200" height="105" rx="18"/><rect x="770" y="360" width="200" height="105" rx="18"/></g>
+<g class="h"><text x="180" y="402" text-anchor="middle">NORTH_AGENT</text><text x="410" y="402" text-anchor="middle">EAST_AGENT</text><text x="640" y="402" text-anchor="middle">SOUTH_AGENT</text><text x="870" y="402" text-anchor="middle">WEST_AGENT</text></g>
+<g class="s"><text x="180" y="433" text-anchor="middle">own traffic state</text><text x="410" y="433" text-anchor="middle">own traffic state</text><text x="640" y="433" text-anchor="middle">own traffic state</text><text x="870" y="433" text-anchor="middle">own traffic state</text></g>
+<rect x="80" y="482" width="890" height="26" rx="13" fill="#f1f5f9"/><text x="525" y="501" text-anchor="middle" class="s">real metrics → messages → priority updates</text>
+<path d="M1005 215V255H525V350" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#a)"/>
+<rect x="55" y="580" width="1090" height="90" rx="18" fill="#ecfdf5" stroke="#34d399" stroke-width="2"/><text x="600" y="617" text-anchor="middle" class="h">Coordinator → Adaptive Signal Controller → Dashboard / ESP32</text><text x="600" y="645" text-anchor="middle" class="t">select next direction + calculate green duration within 10–90 seconds</text>
+</svg>
