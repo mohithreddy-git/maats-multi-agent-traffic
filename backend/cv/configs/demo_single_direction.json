@@ -1,0 +1,10 @@
+{
+  "N": {
+    "video_source": "backend/cv/configs/demo_videos/north.mp4",
+    "roi_polygon": [[0, 200], [640, 200], [640, 480], [0, 480]],
+    "queue_polygon": [[0, 320], [640, 320], [640, 480], [0, 480]],
+    "frame_skip": 0,
+    "resize_width": 640,
+    "detector_kind": "motion"
+  }
+}
